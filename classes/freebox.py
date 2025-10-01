@@ -1,24 +1,45 @@
 from dataclasses import dataclass
+import json
+import os
+
+CONFIG_FILE = "freebox_config.json"
 
 
 @dataclass
 class Freebox:
+    mode: str
+    app_id: str = None
+    app_name: str = None
+    app_version: str = None
+    device_name: str = None
+    app_token: str = None
+
+    @classmethod
+    def from_config(cls):
+        if not os.path.exists(CONFIG_FILE):
+            raise FileNotFoundError("Config file not found.")
+        with open(CONFIG_FILE, "r") as f:
+            data = json.load(f)
+        return cls(**data)
+
+    def save_config(self):
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(self.__dict__, f, indent=2)
+
     def create_app(self):
-        pass
+        print(f"[DEBUG] Creating app: {self.app_name} ({self.app_id})")
 
     def authorize(self):
-        pass
+        print("[DEBUG] Authorizing...")
 
     def login(self):
-        pass
+        print("[DEBUG] Logging in...")
 
     def get_session_token(self):
-        pass
+        print("[DEBUG] Getting session token...")
 
     def logout(self):
-        pass
-
-
+        print("[DEBUG] Logging out...")
 
 
 

@@ -1,16 +1,22 @@
 import json
 import subprocess
 
-from flask import Flask, Response, request, render_template_string
+from flask import Flask, Response, request, render_template_string, redirect, url_for, render_template
 from prometheus_client import Gauge, generate_latest, CONTENT_TYPE_LATEST
 import os
+from classes.freebox import Freebox
+
 
 g = Gauge(
     "Temperature",
     "Temperature of the raspberry pi",
 )
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
+
+
+
+#################################- ROUTES -#################################
 
 
 @app.route("/machine-temperature")
@@ -33,42 +39,43 @@ def temperature():
 
 
 CONFIG_FILE = "freebox_config.json"
-FORM_TEMPLATE = "./template/form.html"
+FORM_TEMPLATE = os.path.join(os.path.dirname(__file__), "templates", "form.html")
 
-with open(FORM_TEMPLATE) as f:
+with open(FORM_TEMPLATE, "r") as f:
     FORM_HTML = f.read()
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    data = {}
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            data = json.load(f)
+
     if request.method == "POST":
         action = request.form.get("action")
 
-        data = ""
+        if action == "build":
+            freebox = Freebox(
+                mode="create",
+                app_id=request.form.get("app_id"),
+                app_name=request.form.get("app_name"),
+                app_version=request.form.get("app_version"),
+                device_name=request.form.get("device_name"),
+            )
 
-        if action == "Créer App":
-            data = {
-                "mode": "create",
-                "app_id": request.form["app_id"],
-                "app_name": request.form["app_name"],
-                "app_version": request.form["app_version"],
-                "device_name": request.form["device_name"],
-                "use_token": False
-            }
+        elif action == "token":
+            freebox = Freebox(
+                mode="token",
+                app_token=request.form.get("app_token")
+            )
+        else:
+            return "Action non reconnue", 400
 
-        elif action == "Utiliser Token":
-            data = {
-                "mode": "token",
-                "app_token": request.form["app_token"],
-                "use_token": True
-            }
+        freebox.save_config()
 
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(data, f, indent=2)
+        return redirect(url_for("index"))
 
-        return f"Saved config: {data}"
-
-    return render_template_string(FORM_HTML)
+    return render_template("form.html", data=data)
 
 
 @app.route("/show")
