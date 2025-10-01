@@ -5,14 +5,14 @@
     <h1>Configuration Freebox</h1>
     <form method="POST">
       <h2>Créer une nouvelle application</h2>
-      <label>App ID: <input type="text" name="app_id" value="{{ data.get('app_id', '') }}"></label><br>
-      <label>Nom: <input type="text" name="app_name" value="{{ data.get('app_name', '') }}"></label><br>
-      <label>Version: <input type="text" name="app_version" value="{{ data.get('app_version', '') }}"></label><br>
-      <label>Device: <input type="text" name="device_name" value="{{ data.get('device_name', '') }}"></label><br>
+      <label>App ID: <input type="text" name="app_id" value="{{ data.get('app_id') or '' }}"></label><br>
+      <label>Nom: <input type="text" name="app_name" value="{{ data.get('app_name') or '' }}"></label><br>
+      <label>Version: <input type="text" name="app_version" value="{{ data.get('app_version') or '' }}"></label><br>
+      <label>Device: <input type="text" name="device_name" value="{{ data.get('device_name') or '' }}"></label><br>
       <input type="submit" name="action" value="build">
 
       <h2>Ou utiliser un app_token existant</h2>
-      <label>App Token: <input type="text" name="app_token" value="{{ data.get('app_token', '') }}"></label><br>
+      <label>App Token: <input type="text" name="app_token" value="{{ data.get('app_token') or '' }}"></label><br>
       <input type="submit" name="action" value="token">
     </form>
   </body>

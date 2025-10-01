@@ -7,7 +7,7 @@ CONFIG_FILE = "freebox_config.json"
 
 @dataclass
 class Freebox:
-    mode: str
+    mode: str = None
     app_id: str = None
     app_name: str = None
     app_version: str = None
@@ -25,6 +25,17 @@ class Freebox:
     def save_config(self):
         with open(CONFIG_FILE, "w") as f:
             json.dump(self.__dict__, f, indent=2)
+
+    def load_config(self):
+        with open(CONFIG_FILE, "r") as f:
+            data = json.load(f)
+            self.mode = data["mode"]
+            self.app_id = data["app_id"]
+            self.app_name = data["app_name"]
+            self.app_version = data["app_version"]
+            self.device_name = data["device_name"]
+            self.app_token = data["app_token"]
+            return None
 
     def create_app(self):
         print(f"[DEBUG] Creating app: {self.app_name} ({self.app_id})")

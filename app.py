@@ -80,11 +80,10 @@ def index():
 
 @app.route("/show")
 def show_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
-            data = json.load(f)
-        return data
-    return "No config found."
+    freebox = Freebox()
+    freebox.load_config()
+
+    return freebox.__dict__
 
 
 @app.route('/metrics')
