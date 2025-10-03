@@ -22,13 +22,15 @@ class Freebox:
     app_version: str = None
     device_name: str = None
     app_token: str = None
-    track_id: str = None
-    password: str = None
+    track_id: int = None
+    _session_token: str = None
 
     def __post_init__(self):
+        self.load_config()
         if self.mode == "build":
-            self.load_config()
             self.create_app()
+        elif self.mode == "token":
+            self.login()
 
     @classmethod
     def from_config(cls):
@@ -51,6 +53,7 @@ class Freebox:
             self.app_version = data["app_version"]
             self.device_name = data["device_name"]
             self.app_token = data["app_token"]
+            self.track_id = data["track_id"]
             return None
 
     def create_app(self):
@@ -66,25 +69,24 @@ class Freebox:
             }
         )
 
-        print(r.json())
-
         self.app_token = r.json()["result"]["app_token"]
         self.track_id = r.json()["result"]["track_id"]
-        print(r)
-        return
+
         self.authorize()
+        self.mode = "token"
+        self.save_config()
 
 
     def authorize(self):
         print("[DEBUG] Authorizing...")
 
-        r = requests.get(f"{HOST}/api/{VERSION}/authorize/{self.track_id}")
+        r = requests.get(f"{HOST}/api/{VERSION}/login/authorize/{self.track_id}")
         status = r.json()["result"]["status"]
         if status == "pending":
             print("[DEBUG] Authorization pending")
 
     def is_authorized(self):
-        r = requests.get(f"{HOST}/api/{VERSION}/authorize/{self.track_id}")
+        r = requests.get(f"{HOST}/api/{VERSION}/login/authorize/{self.track_id}")
 
         return "granted" == r.json()["result"]["status"]
 
@@ -97,7 +99,23 @@ class Freebox:
         r = requests.get(f"{HOST}/api/{VERSION}/login/")
 
         challenge: str = r.json()["result"]["challenge"]
-        self.password = hmac.new(self.app_token.encode(), challenge.encode(), hashlib.sha1).hexdigest()
+        password = hmac.new(self.app_token.encode(), challenge.encode(), hashlib.sha1).hexdigest()
+
+
+        r = requests.post(
+            f"{HOST}/api/{VERSION}/login/session",
+            json={
+                "app_id": self.app_id,
+                "password": password,
+            }
+        )
+
+        success = r.json()["success"]
+
+        if not success:
+            return
+
+        self._session_token = r.json()["result"]["session_token"]
 
     def logout(self):
         print("[DEBUG] Logging out...")
