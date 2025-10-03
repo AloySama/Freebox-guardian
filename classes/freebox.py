@@ -1,8 +1,17 @@
+import hashlib
 from dataclasses import dataclass
 import json
 import os
+import requests
+import hmac
+
+from decorators.retry_on_403 import retry_on_403
 
 CONFIG_FILE = "freebox_config.json"
+HOST = "http://mafreebox.freebox.fr"
+VERSION = "v15"
+
+app_token_file = "app_token.txt"
 
 
 @dataclass
@@ -13,6 +22,13 @@ class Freebox:
     app_version: str = None
     device_name: str = None
     app_token: str = None
+    track_id: str = None
+    password: str = None
+
+    def __post_init__(self):
+        if self.mode == "build":
+            self.load_config()
+            self.create_app()
 
     @classmethod
     def from_config(cls):
@@ -40,17 +56,58 @@ class Freebox:
     def create_app(self):
         print(f"[DEBUG] Creating app: {self.app_name} ({self.app_id})")
 
+        r = requests.post(
+            f"{HOST}/api/{VERSION}/login/authorize",
+            json={
+                "app_id": self.app_id,
+                "app_name": self.app_name,
+                "app_version": self.app_version,
+                "device_name": self.device_name,
+            }
+        )
+
+        print(r.json())
+
+        self.app_token = r.json()["result"]["app_token"]
+        self.track_id = r.json()["result"]["track_id"]
+        print(r)
+        return
+        self.authorize()
+
+
     def authorize(self):
         print("[DEBUG] Authorizing...")
 
+        r = requests.get(f"{HOST}/api/{VERSION}/authorize/{self.track_id}")
+        status = r.json()["result"]["status"]
+        if status == "pending":
+            print("[DEBUG] Authorization pending")
+
+    def is_authorized(self):
+        r = requests.get(f"{HOST}/api/{VERSION}/authorize/{self.track_id}")
+
+        return "granted" == r.json()["result"]["status"]
+
     def login(self):
         print("[DEBUG] Logging in...")
+        if not self.is_authorized():
+            print("[ERROR] Authorization failed.")
+            return
 
-    def get_session_token(self):
-        print("[DEBUG] Getting session token...")
+        r = requests.get(f"{HOST}/api/{VERSION}/login/")
+
+        challenge: str = r.json()["result"]["challenge"]
+        self.password = hmac.new(self.app_token.encode(), challenge.encode(), hashlib.sha1).hexdigest()
 
     def logout(self):
         print("[DEBUG] Logging out...")
+
+    @retry_on_403(max_retries=3)
+    def get_connection_info(self):
+        pass
+
+
+
 
 
 
